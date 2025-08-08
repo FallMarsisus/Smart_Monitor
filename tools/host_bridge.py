@@ -154,9 +154,17 @@ def main() -> int:
     parser.add_argument("--tray", action="store_true", help="Run as a macOS tray app (status bar). Requires rumps.")
     args = parser.parse_args()
 
-    # If tray mode requested and available, start UI instead of CLI loop
-    if args.tray and TRAY_AVAILABLE:
-        return run_tray(args)
+    # If tray requested, try it; on failure or unavailability, fall back to headless bridge
+    if args.tray:
+        if TRAY_AVAILABLE:
+            rc = run_tray(args)
+            if rc == 0:
+                return 0
+            if args.verbose:
+                print("[host_bridge] Tray failed/unavailable at runtime; falling back to headless mode")
+        else:
+            if args.verbose:
+                print("[host_bridge] Tray not available on this platform; falling back to headless mode")
 
     # Connect/reconnect loop
     ser = None
@@ -435,8 +443,21 @@ def run_tray(args) -> int:
             self.bridge.start()
             super().run()
 
-    TrayApp(args).run()
-    return 0
+    try:
+        print("[host_bridge] Tray starting...", flush=True)
+        TrayApp(args).run()
+        print("[host_bridge] Tray exited normally", flush=True)
+        return 0
+    except Exception as e:
+        # Ensure we capture any startup error in logs when run under launchd
+        import traceback
+        traceback.print_exc()
+        try:
+            sys.stderr.write(f"[host_bridge] Tray failed: {e}\n")
+            sys.stderr.flush()
+        except Exception:
+            pass
+        return 78  # EX_CONFIG to surface misconfiguration
 
 if __name__ == "__main__":
     raise SystemExit(main())
