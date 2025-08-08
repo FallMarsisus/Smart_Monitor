@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>io.smartmonitor.hostbridge</string>
+    <key>ProgramArguments</key>
+    <array>
+    <!-- Absolute paths are required; ~ is not expanded by launchd -->
+    <string>/Users/marsisus/Documents/PlatformIO/Projects/Smart_Monitor/.venv/bin/python</string>
+    <string>/Users/marsisus/Documents/PlatformIO/Projects/Smart_Monitor/tools/host_bridge.py</string>
+        <string>--tray</string>
+        <string>--interval</string>
+        <string>2</string>
+        <!-- Optional weather: set your coordinates or remove these flags -->
+        <string>--lat</string>
+        <string>48.8566</string>
+        <string>--lon</string>
+        <string>2.3522</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/tmp/smart_monitor_host_bridge.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/smart_monitor_host_bridge.err.log</string>
+</dict>
+</plist>

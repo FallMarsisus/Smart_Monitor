@@ -293,7 +293,7 @@ static void drawInfoLines() {
   if (ui.tamaSleeping) {
     // bouche neutre
     display.drawFastHLine(cx - mouthW/2, mouthY, mouthW, SH110X_WHITE);
-  } else if (load < 0.35f) {
+  } else if (load < 0.42f) {
   // heureux: petits arcs au-dessus des yeux (mignons)
   int lx0 = cx - eyeDX - eyeW;
   int lx1 = cx - eyeDX + eyeW;
@@ -308,7 +308,7 @@ static void drawInfoLines() {
   int ry  = eyeY - eyeHRight - 4;
   display.drawLine(rx0, ry, rxc, ry - 2, SH110X_WHITE);
   display.drawLine(rxc, ry - 2, rx1, ry, SH110X_WHITE);
-  } else if (load > 0.7f) {
+  } else if (load > 0.68f) {
     display.drawLine(cx - eyeDX - eyeW, eyeY - eyeHLeft - 1, cx - eyeDX + eyeW, eyeY - eyeHLeft - 0, SH110X_WHITE);
     display.drawLine(cx + eyeDX - eyeW, eyeY - eyeHRight - 0, cx + eyeDX + eyeW, eyeY - eyeHRight - 1, SH110X_WHITE);
   }
@@ -328,17 +328,19 @@ static void drawInfoLines() {
     display.drawLine(zx + 5, zy - 1, zx + 8, zy - 1, SH110X_WHITE);
   }
 
-  if (load < 0.35f) {
-    // sourire
-    display.drawLine(cx - mouthW/2, mouthY + 2, cx, mouthY + 4, SH110X_WHITE);
-    display.drawLine(cx, mouthY + 4, cx + mouthW/2, mouthY + 2, SH110X_WHITE);
-  } else if (load < 0.7f) {
-    // neutre
-    display.drawFastHLine(cx - mouthW/2, mouthY, mouthW, SH110X_WHITE);
-  } else {
-    // triste
-    display.drawLine(cx - mouthW/2, mouthY + 2, cx, mouthY, SH110X_WHITE);
-    display.drawLine(cx, mouthY, cx + mouthW/2, mouthY + 2, SH110X_WHITE);
+  if (!ui.tamaSleeping) {
+    if (load < 0.42f) {
+      // sourire
+      display.drawLine(cx - mouthW/2, mouthY + 2, cx, mouthY + 4, SH110X_WHITE);
+      display.drawLine(cx, mouthY + 4, cx + mouthW/2, mouthY + 2, SH110X_WHITE);
+    } else if (load < 0.68f) {
+      // neutre
+      display.drawFastHLine(cx - mouthW/2, mouthY, mouthW, SH110X_WHITE);
+    } else {
+      // triste
+      display.drawLine(cx - mouthW/2, mouthY + 2, cx, mouthY, SH110X_WHITE);
+      display.drawLine(cx, mouthY, cx + mouthW/2, mouthY + 2, SH110X_WHITE);
+    }
   }
 
   // Goutte de sueur (quand charge haute ou événement aléatoire)
@@ -415,11 +417,14 @@ void loop() {
     }
   }
 
-  // 2) Ecran d'attente si aucune donnée reçue récemment
-  if (lastDataMs == 0 || (millis() - lastDataMs) > 5000) {
-  ui.tamaSleeping = true; // dort si plus de données
-  paintWaiting();
-  return;
+  // 2) Connexion/attente: si jamais aucune donnée reçue, écran d'attente.
+  //    Sinon, en cas de perte de données, on montre le tamagochi endormi au lieu d'un écran plein.
+  if (lastDataMs == 0) {
+    paintWaiting();
+    return;
+  }
+  if ((millis() - lastDataMs) > 4000) {
+    ui.tamaSleeping = true; // dort si plus de données récentes, mais on continue à rendre l'UI
   }
 
   // 3) Animation douce (moins d'agitation)
@@ -475,11 +480,14 @@ void loop() {
 
   // Sommeil: si charge faible prolongée, entrer en sommeil
   float curLoad = 0.0f; curLoad += ui.curCpu/100.0f; curLoad += ui.curRamRatio; curLoad *= 0.5f;
-  if (curLoad < 0.15f) {
+  if (curLoad < 0.22f) { // seuil un peu plus permissif
     if (ui.lowLoadSince == 0) ui.lowLoadSince = now;
-    if (!ui.tamaSleeping && now - ui.lowLoadSince > 15000) ui.tamaSleeping = true; // 15s faible
+    if (!ui.tamaSleeping && now - ui.lowLoadSince > 9000) ui.tamaSleeping = true; // 9s faible
   } else {
-    ui.lowLoadSince = 0; ui.tamaSleeping = false; ui.sleepStep = 0;
+    ui.lowLoadSince = 0;
+    // Ne pas réveiller si la connexion est perdue (on garde le dodo)
+    if ((millis() - lastDataMs) <= 4000) ui.tamaSleeping = false;
+    ui.sleepStep = 0;
   }
 
   // 4) Rendu
